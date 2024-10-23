@@ -1,9 +1,12 @@
+*********************************
+**作成者：梶原、松木
+********************************
 .section .text
 
 start:
     jsr Init_Q
     move.l  #LENGTH, %d4
-    move.l  #B_SIZE, %d5
+    move.l  #LEMGTH, %d5
     lea.l   Data_to_Que, %a0 
     lea.l   InQ_result, %a1  
     lea.l   Output,   %a2
@@ -14,7 +17,7 @@ LOOP1:
     subq.w   #1, %d4
     bcs      LOOP2
     move.b   (%a0)+, %d1   /*入力するデータ*/
-    move.w   #0, %d0       /* キュー番号 0 */
+    move.w   #1, %d0       /* キュー番号 0 */
     jsr      INQ          /* サブルーチン呼び出し */
     move.l   %d0, (%a1)+
     bra      LOOP1
@@ -24,9 +27,9 @@ LOOP1:
 LOOP2:
     subq.w   #1, %d5
     bcs      End_of_program
-    move.w   #0, %d0      /* キュー番号 0 */
+    move.w   #1, %d0      /* キュー番号 0 */
     jsr      OUTQ         /* サブルーチン呼び出し */
-    move.b   %d0, (%a3)+
+    move.l   %d0, (%a3)+
     cmp.b    #0, %d0
     beq      LOOP2
     move.b   %d1, (%a2)+
@@ -75,7 +78,7 @@ UseQueue1:
     move.b  GET_FLG1, GET_FLG
     lea.l   BF1_START, %a6
     move.l  %a6, BF_START
-    lea.l   BF1_END, %a0
+    lea.l   BF1_END, %a6
     move.l  %a6, BF_END
     rts
 
@@ -106,8 +109,11 @@ UpdateQueue1:
 **出力:失敗0/成功1(%d0.L)
 **********************************************************
 INQ:
+    move.w %sr, -(%sp)  /*走行レベルを退避*/
+    move.w #0x2700, %SR /*走行レベルを7に設定*/
     jsr SelectQueue
     jsr PUT_BUF
+    move.w (%sp)+, %sr /*走行レベルの回復*/
     rts
 
 
@@ -150,8 +156,11 @@ PUT_BUF_Finish:
 **出力:失敗0/成功1(%d0.L), 取り出した8bitデータdata(%d1.B)
 **********************************************************
 OUTQ:
+    move.w  %sr, -(%sp) /*走行レベルの退避*/
+    move.w  #0x2700, %SR /*走行レベルを7に設定*/
     jsr SelectQueue
     jsr GET_BUF
+    move.w  (%sp)+, %sr /*走行レベルの回復*/
     rts
 
 
@@ -178,7 +187,7 @@ GET_BUF_STEP2:
     move.b  #0xff, PUT_FLG
     jsr     UpdateQueuePointers
     move.b  #1, %d0 /* 成功したときd0を1にセット */
-    bra     GET_BUF_Finish
+    bra     GET_BUF_Finish 
 
 GET_BUF_Fail:
     move.b  #0, %d0 /* 失敗したときd0を0にセット */
@@ -216,6 +225,6 @@ BF_END:     .ds.l  1  /* バッファ終了ポインタ */
 .equ   LENGTH,   12 /*キューに入れるデータの個数*/
 Data_to_Que:  .dc.b   1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12/*INQで読み込むためのデータ領域*/
 Output:       .ds.b  B_SIZE+2 /*OUT_Qの出力先*/
-InQ_result:   .ds.b  10  /*INQの戻り値(0 or 1)*/
-OutQ_result:  .ds.b  10  /*OUTQの戻り値(0 or 1)*/
+InQ_result:   .ds.l  10  /*INQの戻り値(0 or 1)*/
+OutQ_result:  .ds.l  10  /*OUTQの戻り値(0 or 1)*/
 .end
