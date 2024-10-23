@@ -62,10 +62,10 @@ UseQueue0:
     move.l  GET_PTR0, GET_PTR
     move.b  PUT_FLG0, PUT_FLG
     move.b  GET_FLG0, GET_FLG
-    lea.l   BF0_START, %a0
-    move.l  %a0, BF_START
-    lea.l   BF0_END, %a0
-    move.l  %a0, BF_END
+    lea.l   BF0_START, %a6
+    move.l  %a6, BF_START
+    lea.l   BF0_END, %a6
+    move.l  %a6, BF_END
     rts
 
 UseQueue1:
@@ -73,10 +73,10 @@ UseQueue1:
     move.l  GET_PTR1, GET_PTR
     move.b  PUT_FLG1, PUT_FLG
     move.b  GET_FLG1, GET_FLG
-    lea.l   BF1_START, %a0
-    move.l  %a0, BF_START
+    lea.l   BF1_START, %a6
+    move.l  %a6, BF_START
     lea.l   BF1_END, %a0
-    move.l  %a0, BF_END
+    move.l  %a6, BF_END
     rts
 
 /* キュー番号に応じたポインタ・フラグ・バッファを選択して更新する */
@@ -117,7 +117,7 @@ PUT_BUF:
     cmp.b   #0x00, %d2
     beq     PUT_BUF_Fail /* キューが満杯のとき */
     movea.l PUT_PTR, %a1
-    move.b  %d0, (%a1)+
+    move.b  %d1, (%a1)+
     move.l   BF_END, %a3
     cmpa.l  %a3, %a1
     bls     PUT_BUF_STEP1
@@ -213,8 +213,8 @@ BF_START:   .ds.l  1  /* バッファ開始ポインタ */
 BF_END:     .ds.l  1  /* バッファ終了ポインタ */
 
 
-.equ   LENGTH,   11 /*キューに入れるデータの個数*/
-Data_to_Que:  .dc.b   1, 2, 3, 4, 5, 6, 7, 8, 9, 10/*INQで読み込むためのデータ領域*/
+.equ   LENGTH,   12 /*キューに入れるデータの個数*/
+Data_to_Que:  .dc.b   1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12/*INQで読み込むためのデータ領域*/
 Output:       .ds.b  B_SIZE+2 /*OUT_Qの出力先*/
 InQ_result:   .ds.b  10  /*INQの戻り値(0 or 1)*/
 OutQ_result:  .ds.b  10  /*OUTQの戻り値(0 or 1)*/
