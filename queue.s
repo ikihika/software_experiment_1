@@ -6,7 +6,7 @@
 start:
     jsr Init_Q
     move.l  #LENGTH, %d4
-    move.l  #LEMGTH, %d5
+    move.l  #LENGTH, %d5
     lea.l   Data_to_Que, %a0 
     lea.l   InQ_result, %a1  
     lea.l   Output,   %a2
