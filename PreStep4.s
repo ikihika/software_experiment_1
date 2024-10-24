@@ -54,6 +54,9 @@ SYS_STK:
 	.even
 SYS_STK_TOP: /* システムスタック領域の最後尾 */
 
+
+
+
 ***************************************************************
 ** 初期化
 ** 内部デバイスレジスタには特定の値が設定されている．
@@ -107,9 +110,196 @@ boot:
 	** 走行レベルの設定
 	****************
 	move.w #0x2000, %SR /* スーパバイザモード, 割り込み全許可 */
+
+
 	
 	bra MAIN
 
+
+/* キューの初期化 */
+Init_Q:
+	lea.l   BF0_START, %a0
+	move.l  %a0, PUT_PTR0
+	move.l  %a0, GET_PTR0
+	move.b  #0xff, PUT_FLG0
+	move.b  #0x00, GET_FLG0
+
+	lea.l   BF1_START, %a0
+	move.l  %a0, PUT_PTR1
+	move.l  %a0, GET_PTR1
+	move.b  #0xff, PUT_FLG1
+	move.b  #0x00, GET_FLG1
+	rts
+
+/* キュー番号に応じたポインタ・フラグ・バッファを設定 */
+SelectQueue:
+	cmp.w   #0, %d0
+	beq     UseQueue0
+	cmp.w   #1, %d0
+	beq     UseQueue1
+
+UseQueue0:
+	move.l  PUT_PTR0, PUT_PTR
+	move.l  GET_PTR0, GET_PTR
+	move.b  PUT_FLG0, PUT_FLG
+	move.b  GET_FLG0, GET_FLG
+	lea.l   BF0_START, %a6
+	move.l  %a6, BF_START
+	lea.l   BF0_END, %a6
+	move.l  %a6, BF_END
+	rts
+
+UseQueue1:
+	move.l  PUT_PTR1, PUT_PTR
+	move.l  GET_PTR1, GET_PTR
+	move.b  PUT_FLG1, PUT_FLG
+	move.b  GET_FLG1, GET_FLG
+	lea.l   BF1_START, %a6
+	move.l  %a6, BF_START
+	lea.l   BF1_END, %a6
+	move.l  %a6, BF_END
+	rts
+
+/* キュー番号に応じたポインタ・フラグ・バッファを選択して更新する */
+UpdateQueuePointers:
+	cmp.w   #0, %d0
+	beq     UpdateQueue0
+	cmp.w   #1, %d0
+	beq     UpdateQueue1
+
+UpdateQueue0:
+	move.l  PUT_PTR, PUT_PTR0
+	move.l  GET_PTR, GET_PTR0
+	move.b  PUT_FLG, PUT_FLG0
+	move.b  GET_FLG, GET_FLG0
+	rts
+
+UpdateQueue1:
+	move.l  PUT_PTR, PUT_PTR1
+	move.l  GET_PTR, GET_PTR1
+	move.b  PUT_FLG, PUT_FLG1
+	move.b  GET_FLG, GET_FLG1
+	rts
+
+*********************************************************
+**InQ(no, data)
+**入力:キュー番号no(%d0.L), 書き込む8bitデータdata(%d1.B)
+**出力:失敗0/成功1(%d0.L)
+**********************************************************
+INQ:
+	move.w %sr, -(%sp)  /*走行レベルを退避*/
+	move.w #0x2700, %SR /*走行レベルを7に設定*/
+	jsr SelectQueue
+	jsr PUT_BUF
+	move.w (%sp)+, %sr /*走行レベルの回復*/
+	rts
+
+
+PUT_BUF:
+	movem.l %d2/%a1-%a3, -(%sp) /* スタック退避 */
+	move.b  PUT_FLG, %d2
+	cmp.b   #0x00, %d2
+	beq     PUT_BUF_Fail /* キューが満杯のとき */
+	movea.l PUT_PTR, %a1
+	move.b  %d1, (%a1)+
+	move.l   BF_END, %a3
+	cmpa.l  %a3, %a1
+	bls     PUT_BUF_STEP1
+	move.l   BF_START, %a2
+	movea.l %a2, %a1
+
+PUT_BUF_STEP1:
+	move.l  %a1, PUT_PTR
+	cmpa.l  GET_PTR, %a1
+	bne     PUT_BUF_STEP2
+	move.b  #0x00, PUT_FLG
+
+PUT_BUF_STEP2:
+	move.b  #0xff, GET_FLG
+	jsr     UpdateQueuePointers
+	move.b  #1, %d0  /* 成功したときd0を1にセット */
+	bra PUT_BUF_Finish
+
+PUT_BUF_Fail:
+	move.b  #0, %d0 /* 失敗したときd0を0にセット */
+
+PUT_BUF_Finish:
+	movem.l (%sp)+, %a3-%a1/%d2
+	rts
+
+
+***********************************************************
+**OUTQ(no,data)
+**入力:キュー番号no(%d0.L)
+**出力:失敗0/成功1(%d0.L), 取り出した8bitデータdata(%d1.B)
+**********************************************************
+OUTQ:
+	move.w  %sr, -(%sp) /*走行レベルの退避*/
+	move.w  #0x2700, %SR /*走行レベルを7に設定*/
+	jsr SelectQueue
+	jsr GET_BUF
+	move.w  (%sp)+, %sr /*走行レベルの回復*/
+	rts
+
+
+GET_BUF:
+	movem.l %d2/%a1-%a3, -(%sp) /* スタック退避 */
+	move.b  GET_FLG, %d2
+	cmp.b   #0x00, %d2
+	beq     GET_BUF_Fail /* キューが空のとき */
+	movea.l GET_PTR, %a1
+	move.b  (%a1)+, %d1
+	move.l   BF_END, %a3
+	cmpa.l   %a3, %a1
+	bls      GET_BUF_STEP1
+	move.l   BF_START, %a2
+	movea.l  %a2, %a1
+
+GET_BUF_STEP1:
+	move.l  %a1, GET_PTR
+	cmpa.l  PUT_PTR, %a1
+	bne     GET_BUF_STEP2
+	move.b  #0x00, GET_FLG
+
+GET_BUF_STEP2:
+	move.b  #0xff, PUT_FLG
+	jsr     UpdateQueuePointers
+	move.b  #1, %d0 /* 成功したときd0を1にセット */
+	bra     GET_BUF_Finish 
+
+GET_BUF_Fail:
+	move.b  #0, %d0 /* 失敗したときd0を0にセット */
+
+GET_BUF_Finish:
+	movem.l (%sp)+, %a3-%a1/%d2
+	rts
+
+.section .data
+    .equ  B_SIZE,  256
+/*受信用のキュー*/
+BF0_START:  .ds.b  B_SIZE-1
+BF0_END:    .ds.b  1
+PUT_PTR0:   .ds.l  1
+GET_PTR0:   .ds.l  1
+PUT_FLG0:   .ds.b  1
+GET_FLG0:   .ds.b  1
+
+/*送信用のキュー*/
+BF1_START:  .ds.b  B_SIZE-1
+BF1_END:    .ds.b  1
+PUT_PTR1:   .ds.l  1
+GET_PTR1:   .ds.l  1
+PUT_FLG1:   .ds.b  1
+GET_FLG1:   .ds.b  1
+
+PUT_PTR:    .ds.l  1  /* 共通ポインタ */
+GET_PTR:    .ds.l  1  /* 共通ポインタ */
+PUT_FLG:    .ds.b  1  /* 共通フラグ */
+GET_FLG:    .ds.b  1  /* 共通フラグ */
+BF_START:   .ds.l  1  /* バッファ開始ポインタ */
+BF_END:     .ds.l  1  /* バッファ終了ポインタ */
+
+	
 
 
 ***************************************************************
@@ -119,6 +309,27 @@ boot:
 .section .text
 .even
 MAIN:
+	jsr Init_Q               /* キューの初期化 */
+	move.b #1,%d0		 /*送信用キューを操作する*/
+	move.b #15, %d2           /* 外側ループのカウンタ（16回） */
+	move.b #0x61, %d1         /* 開始文字 'a' (0x61) + d1で入れたい文字のASCIIコード */
+
+Loop1:
+	jsr INQ /* キューに文字を入れてポインタを1進める */
+	cmpi.b #0,%d2
+	beq     Loop2
+	subq.b    #1, %d2           /* 内側ループのカウンタ（16回） */
+	bra     Loop1
+
+Loop2:
+	addq.b  #1, %d1           /* 次の文字に進む */
+	move.b   #15, %d2
+	cmpi.b    #0x71, %d1	  /* 文字コードが0x71になったら終了 */
+	bne     Loop1
+set:
+	move.w #0x2000,%SR	  /*走行レベル0*/
+	move.w #0xE10C,USTCNT1    /*受信割り込みを許可する*/
+	move.l #0x00fffffb,IMR    /*送受信割り込みマスクを外す*/
 
 LOOP:
 	bra LOOP
@@ -141,8 +352,28 @@ end_interrupt:
 	movem.l (%sp)+, %d0-%d7/%a0-%a6   /* レジスタの復帰 */
 	rte                               /* 割り込みからの復帰 */
 
+*********************************
+**INTERPUT(ch)
+**入力:チャネルch(%d1.L)
+**戻り値:なし
+*********************************	
 INTERPUT:
+	move.l %d0, -(%sp) /*スタック退避*/
+	move.w 0x2700, %SR /*走行レベルを7に設定*/
+	cmpi.b #0, %d1
+	bne    END_INTERPUT /*チャネルが０以外のとき何もせずに復帰*/
+	move.b #1, %d0      /*送信キューを選択*/
+	jsr    OUTQ         /*OUTQを実行*/
+	cmpi.b #0, %d0
+	beq    MASK         /*キューが空のときマスクを実行*/
+	move.b %d1, 0xFFF906 /*UTX1*にキューのデータを送信*/
+	ori.w  #0x8400, 0xFFF906/*上位8bitのヘッダ付与*/
+	bra    END_INTERPUT
+
+MASK:
+	andi.w #0xDFFF, 0xFFF900 /*送信割り込みの禁止*/
 
 
-	
+END_INTERPUT:
+	move.l (%sp)+, %d0 
 	rts
