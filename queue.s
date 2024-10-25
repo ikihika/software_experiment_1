@@ -1,6 +1,7 @@
-*********************************
+***********************************
 **作成者：梶原、松木
-********************************
+**コーディング：梶原, チェック：松木
+************************************
 .section .text
 
 start:
@@ -126,15 +127,19 @@ PUT_BUF:
     move.b  %d1, (%a1)+
     move.l   BF_END, %a3
     cmpa.l  %a3, %a1
-    bls     PUT_BUF_STEP1
-    move.l   BF_START, %a2
+    bls     PUT_BUF_INCREMENT /*終端に達していないときインクリメント*/
+    move.l  BF_START, %a2
     movea.l %a2, %a1
+    bra     PUT_BUF_STEP1
 
+PUT_BUF_INCREMENT:
+    addq.l #1, %a1
+	
 PUT_BUF_STEP1:
     move.l  %a1, PUT_PTR
     cmpa.l  GET_PTR, %a1
     bne     PUT_BUF_STEP2
-    move.b  #0x00, PUT_FLG
+    move.b  #0x00, PUT_FLG /*GET_FLG = PUT_FLGのときキューは満杯*/
 
 PUT_BUF_STEP2:
     move.b  #0xff, GET_FLG
@@ -143,7 +148,7 @@ PUT_BUF_STEP2:
     bra PUT_BUF_Finish
 
 PUT_BUF_Fail:
-    move.b  #0, %d0 /* 失敗したときd0を0にセット */
+    move.l  #0, %d0 /* 失敗したときd0を0にセット */
 
 PUT_BUF_Finish:
     movem.l (%sp)+, %a3-%a1/%d2
@@ -170,30 +175,34 @@ GET_BUF:
     cmp.b   #0x00, %d2
     beq     GET_BUF_Fail /* キューが空のとき */
     movea.l GET_PTR, %a1
-    move.b  (%a1)+, %d1
+    move.b  (%a1), %d1
     move.l   BF_END, %a3
     cmpa.l   %a3, %a1
-    bls      GET_BUF_STEP1
+    bls      GET_BUF_INCREMENT /*終端に達していないときインクリメント*/
     move.l   BF_START, %a2
     movea.l  %a2, %a1
+    bra      GET_BUF_STEP1	
+
+GET_BUF_INCREMENT:
+    addq.l #1, %a1
 
 GET_BUF_STEP1:
     move.l  %a1, GET_PTR
     cmpa.l  PUT_PTR, %a1
-    bne     GET_BUF_STEP2
-    move.b  #0x00, GET_FLG
+    bne     GET_BUF_STEP2  
+    move.b  #0x00, GET_FLG /*GET_BUF = PUT_BUFのときキューは空*/
 
 GET_BUF_STEP2:
     move.b  #0xff, PUT_FLG
     jsr     UpdateQueuePointers
-    move.b  #1, %d0 /* 成功したときd0を1にセット */
+    move.l  #1, %d0 /* 成功したときd0を1にセット */
     bra     GET_BUF_Finish 
 
 GET_BUF_Fail:
     move.b  #0, %d0 /* 失敗したときd0を0にセット */
 
 GET_BUF_Finish:
-    movem.l (%sp)+, %a3-%a1/%d2
+    movem.l (%sp)+, %d2/%a1-%a3
     rts
 
 .section .data
