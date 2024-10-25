@@ -45,6 +45,6 @@ SET_SIZE:
 	move.l %d4, %d0 /*戻り値の設定*/
 	
 END_PUTSTRING:
-	movem.l (%sp)+, %a0-%a1
+	movem.l (%sp)+, %d4/%a0-%a1
 	rts
 
