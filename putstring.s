@@ -32,7 +32,7 @@ PUT_LOOP:
 	jsr    INQ
 	cmpi.l #0, %d0     
 	beq    ANMASK         /*INQが失敗のとき*/
-	addai.b  #1,  %a1     /*次のバイトに移動*/
+	addi.l #1, %a1       /*次のバイトに移動*/
 	addi.l #1, %d4        /*szをインクリメント*/
 	bra    LOOP1
 
