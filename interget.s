@@ -13,7 +13,7 @@
 *************************************************
 
 INTERGET:
-        movem.l %d0-%d1,-(%sp)	/* スタック退避 */
+        movem.l %d0-%d1,-(%sp)	/* レジスタ退避 */
         cmpi.l  #0,%d1		/* ch≠0ならなにもせず復帰 */
         bne     END_INTERGET
         move.l  #0,%d0		/* キュー番号を0にする */
@@ -21,6 +21,6 @@ INTERGET:
         jsr     INQ
 
 END_INTERGET:
-        movem.l (%sp)+,%d0-%d1	/* スタックの回復 */
+        movem.l (%sp)+,%d0-%d1	/* レジスタの回復 */
         rts
         
