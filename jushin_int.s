@@ -1,3 +1,8 @@
+
+これ使えないです！！！！！
+
+
+
 .include "queue.s"
 .include "interput.s"
 .include "interget.s"	
