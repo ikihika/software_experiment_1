@@ -34,7 +34,7 @@ PUT_LOOP:
 	beq    ANMASK         /*INQが失敗のとき*/
 	addi.l #1, %a1       /*次のバイトに移動*/
 	addi.l #1, %d4        /*szをインクリメント*/
-	bra    LOOP1
+	bra    PUT_LOOP
 
 
 ANMASK:
