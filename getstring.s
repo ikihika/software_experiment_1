@@ -28,7 +28,7 @@ LOOP:
 	beq	Input		/* OUTQの復帰値が0ならInputへ */
 	move.l	%d1,(%a1)	/* i番地にdata(OUTQの出力値)をcopy */
 	addi.l	#1,%d4		/* sz++ */
-	addi.b	#1,%a1		/* i++ */
+	addq.l	#1,%a1		/* i++ */
 	bra	LOOP
 	
 Input:
