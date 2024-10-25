@@ -124,7 +124,7 @@ PUT_BUF:
     cmp.b   #0x00, %d2
     beq     PUT_BUF_Fail /* キューが満杯のとき */
     movea.l PUT_PTR, %a1
-    move.b  %d1, (%a1)+
+    move.b  %d1, (%a1)
     move.l   BF_END, %a3
     cmpa.l  %a3, %a1
     bls     PUT_BUF_INCREMENT /*終端に達していないときインクリメント*/
@@ -184,7 +184,7 @@ GET_BUF:
     bra      GET_BUF_STEP1	
 
 GET_BUF_INCREMENT:
-    addq.l #1, %a1
+    addq.l  #1, %a1
 
 GET_BUF_STEP1:
     move.l  %a1, GET_PTR
