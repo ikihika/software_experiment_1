@@ -1,5 +1,6 @@
 *****************************
 **作成者：松木、梶原
+**コーディング：松木、チェック：梶原	
 *****************************	
 	.include "queue.s"
 
@@ -24,7 +25,7 @@ LOOP:
 	move.l	#0,%d0		/* キュー番号を0に設定 */
 	bra	OUTQ
 	cmpi.l	#0,%d0
-	beq	END_PUTSTRING	/* OUTQの復帰値が0ならEND_PUTSTRINGへ */
+	beq	Input		/* OUTQの復帰値が0ならInputへ */
 	move.l	%d1,(%a1)	/* i番地にdata(OUTQの出力値)をcopy */
 	addi.l	#1,%d4		/* sz++ */
 	adda.b	#1,%a1		/* i++ */
