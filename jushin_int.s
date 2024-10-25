@@ -123,31 +123,7 @@ boot:
 .section .text
 .even
 MAIN:
-	jsr Init_Q
-	move.l  #LENGTH, %d4
-	lea.l Data_to_Que, %a0
-	lea.l   InQ_result, %a1
-	lea.l   Output,   %a2
-	lea.l   OutQ_result, %a3
-
-LOOP:
-	subq.w   #1, %d4
-	bcs      END_LOOP
-	move.b   (%a0)+, %d1   /*入力するデータ*/
-	move.w   #1, %d0       /* キュー番号 0 */
-	jsr      INQ          /* サブルーチン呼び出し */
-	move.l   %d0, (%a1)+
-	bra      LOOP
 	
-END_LOOP:
-	movea.l BF1_START, %a1
-	move.l #LENGTH, %d5
-	move.w #0x2000, %SR
-	move.w #0xe104, USTCNT1
-	
-LOOP:
-	bra LOOP
-
 .section .text
 .even
 uart1_interrupt:
