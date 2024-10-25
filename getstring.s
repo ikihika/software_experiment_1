@@ -1,7 +1,7 @@
-*****************************
+**********************************
 **作成者：松木、梶原
 **コーディング：松木、チェック：梶原	
-*****************************	
+**********************************	
 	.include "queue.s"
 
 	.section .text
@@ -23,12 +23,12 @@ LOOP:
 	cmp.l	%d4,%d3
 	beq	Input		/* size=szならInputへ */
 	move.l	#0,%d0		/* キュー番号を0に設定 */
-	jsr	OUTQ
+	jsr	OUTQ		/* 出力：失敗0/成功1(%d0)、8bitのdata(%d1) */
 	cmpi.l	#0,%d0
 	beq	Input		/* OUTQの復帰値が0ならInputへ */
 	move.l	%d1,(%a1)	/* i番地にdata(OUTQの出力値)をcopy */
 	addi.l	#1,%d4		/* sz++ */
-	adda.b	#1,%a1		/* i++ */
+	addi.b	#1,%a1		/* i++ */
 	bra	LOOP
 	
 Input:
