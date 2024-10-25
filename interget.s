@@ -18,7 +18,7 @@ INTERGET:
         bne     END_INTERGET
         move.l  #0,%d0		/* キュー番号を0にする */
         move.l  %d2,%d1		/* INQの入力d1に受信データを格納 */
-        bra     INQ
+        jsr     INQ
 
 END_INTERGET:
         movem.l (%sp)+,%d0-%d1	/* スタックの回復 */

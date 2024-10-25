@@ -23,7 +23,7 @@ LOOP:
 	cmp.l	%d4,%d3
 	beq	Input		/* size=szならInputへ */
 	move.l	#0,%d0		/* キュー番号を0に設定 */
-	bra	OUTQ
+	jsr	OUTQ
 	cmpi.l	#0,%d0
 	beq	Input		/* OUTQの復帰値が0ならInputへ */
 	move.l	%d1,(%a1)	/* i番地にdata(OUTQの出力値)をcopy */
