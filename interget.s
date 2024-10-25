@@ -12,14 +12,14 @@
 *************************************************
 
 INTERGET:
-        movem.l %d0-%d1,-(%sp)
-        cmpi.l  #0,%d1
+        movem.l %d0-%d1,-(%sp)	/* スタック退避 */
+        cmpi.l  #0,%d1		/* ch≠0ならなにもせず復帰 */
         bne     END_INTERGET
-        move.l  #0,%d0
-        move.l  %d2,%d1
+        move.l  #0,%d0		/* キュー番号を0にする */
+        move.l  %d2,%d1		/* INQの入力d1に受信データを格納 */
         bra     INQ
 
 END_INTERGET:
-        movem.l (%sp)+,%d0-%d1
+        movem.l (%sp)+,%d0-%d1	/* スタックの回復 */
         rts
         
