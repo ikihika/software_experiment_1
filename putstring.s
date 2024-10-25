@@ -38,7 +38,7 @@ PUT_LOOP:
 
 
 ANMASK:
-	ori.w #0x2000, 0xFFF900/*アンマスクの実行*/
+	ori.w #0x0020, 0xFFF900/*アンマスクの実行*/
 	
 
 SET_SIZE:
