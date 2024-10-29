@@ -98,7 +98,7 @@ boot:
 	****************
 	** 送受信 (UART1) 関係の変更
 	****************
-	move.w #0xe10c, USTCNT1 /* 送受信可能, パリティなし, 1 stop, 8 bit, */
+	move.w #0xe108, USTCNT1 /* 送受信可能, パリティなし, 1 stop, 8 bit, */
 				/* 受信割り込み許可、送信割り込み許可 */
 
 	****************
@@ -316,9 +316,14 @@ WORK: .ds.b 256
 .section .text
 .even
 MAIN:
-	move.l #0x000fffff,%d7  /*ループカウンター*/
+	move.l #0x00fffff,%d7  /*ループカウンター*/
+	move.l #0x00fffffb, IMR
 
 LOOP:
+	addq.l #1,%d7
+	addq.l #1,%d7
+	subq.l #1,%d7
+	subq.l #1,%d7
 	subq.l #1,%d7
 	bne LOOP
 
@@ -332,9 +337,6 @@ END:
 	move.l #0x100,%d3
 	jsr GETSTRING
 	move.l %d0,%d4
-	move.l #0x00fffffb, IMR
-
-	move.b #'2',LED6         /* LED6 を光らせる */
 
 	/* PUTSTRING(0, #WORK, n) */
 	move.l #0,%d0
@@ -343,7 +345,7 @@ END:
 	move.l %d4,%d3
 	jsr PUTSTRING
 
-	move.b #'3',LED5         /* LED5 を光らせる */
+
 	bra MAIN
 	
 .section .text
@@ -362,13 +364,16 @@ check_send:
 	bra     end_interrupt
 
 check_receive:
-	move.w  URX1, %d3                 /* URX1の内容をd0に一時的に保存 */
+	move.w  URX1, %d3                 /* URX1の内容をd3に一時的に保存 */
 	move.b  %d3, %d2                  /* d3の下位8bit(データ部分)をd2にコピー */
+	move.b #'7',LED1
 	btst    #13, %d3                  /* 受信レジスタの13ビット目をチェック */
 	beq     end_interrupt             /* 受信割り込みでなければ終了 */
+	
 
 	/* 受信割り込みの場合 */
-	moveq.l #0, %d1                   /* ch = 0 を設定 */
+	moveq.l #0, %d1 /* ch = 0 を設定 */
+	move.b #'6',LED2
 	jsr     INTERGET                  /* INTERGETを呼び出し */
 
 end_interrupt:
@@ -381,6 +386,7 @@ end_interrupt:
 **戻り値:なし
 *********************************	
 INTERPUT:
+	move.b #'4',LED4
 	move.l %d0, -(%sp) /*スタック退避*/
 	move.w #0x2700, %SR /*走行レベルを7に設定*/
 	cmpi.l #0, %d1
@@ -414,6 +420,7 @@ END_INTERPUT:
 *************************************************************************************
 
 PUTSTRING:
+	move.b #'3',LED5         /* LED5 を光らせる */
 	movem.l %d4/%a0-%a1, -(%sp)
 	cmpi.l #0, %d0
 	bne    END_PUTSTRING  /*チャネルが０以外のとき何もせずに復帰*/
@@ -457,6 +464,7 @@ END_PUTSTRING:
 *************************************************
 
 INTERGET:
+	move.b #'5',LED3
         movem.l %d0,-(%sp)	/* レジスタ退避 */
         cmpi.l  #0,%d1		/* ch≠0ならなにもせず復帰 */
         bne     END_INTERGET
@@ -479,6 +487,7 @@ END_INTERGET:
 
 
 GETSTRING:
+	move.b #'2',LED6         /* LED6 を光らせる */
 	movem.l	%d4/%a1,-(%sp)	/* レジスタの退避 */
 	cmpi.l	#0,%d1
 	bne	END_GETSTRING	/* チャネルが0以外ならEND_GETSTRINGへ */
@@ -502,11 +511,6 @@ Input:
 END_GETSTRING:
 	movem.l	(%sp)+,%d4/%a1	/* レジスタの回復 */
 	rts
-
-
-
-
-
 
 
 
