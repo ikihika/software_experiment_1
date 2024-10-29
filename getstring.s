@@ -20,7 +20,7 @@ GETSTRING:
 	bne	END_GETSTRING	/* チャネルが0以外ならEND_GETSTRINGへ */
 	move.l	#0,%d4		/* szの値をレジスタd4に格納 */
 	move.l	%d2,%a1		/* pを%a1に格納 */
-LOOP:
+GET_LOOP:
 	cmp.l	%d4,%d3
 	beq	Input		/* size=szならInputへ */
 	move.l	#0,%d0		/* キュー番号を0に設定 */
@@ -30,7 +30,7 @@ LOOP:
 	move.l	%d1,(%a1)	/* i番地にdata(OUTQの出力値)をcopy */
 	addi.l	#1,%d4		/* sz++ */
 	addq.l	#1,%a1		/* i++ */
-	bra	LOOP
+	bra	GET_LOOP
 	
 Input:
 	move.l	%d4,%d0		/* sz(%d4)の値を%d0に格納 */
