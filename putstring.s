@@ -32,13 +32,13 @@ PUT_LOOP:
 	jsr    INQ
 	cmpi.l #0, %d0     
 	beq    ANMASK         /*INQが失敗のとき*/
-	addi.l #1, %a1       /*次のバイトに移動*/
+	addq.l #1, %a1       /*次のバイトに移動*/
 	addi.l #1, %d4        /*szをインクリメント*/
 	bra    PUT_LOOP
 
 
 ANMASK:
-	ori.w #0x0020, 0xFFF900/*アンマスクの実行*/
+	ori.w #0x0004, USTCNT1/*アンマスクの実行*/
 	
 
 SET_SIZE:
