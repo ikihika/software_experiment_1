@@ -14,10 +14,10 @@
 	***********************************************
 
 
-PUTSTRING:
+GETSTRING:
 	movem.l	%d4/%a1,-(%sp)	/* レジスタの退避 */
 	cmpi.l	#0,%d1
-	bne	END_PUTSTRING	/* チャネルが0以外ならEND_PUTSTRINGへ */
+	bne	END_GETSTRING	/* チャネルが0以外ならEND_GETSTRINGへ */
 	move.l	#0,%d4		/* szの値をレジスタd4に格納 */
 	move.l	%d2,%a1		/* pを%a1に格納 */
 LOOP:
@@ -35,7 +35,7 @@ LOOP:
 Input:
 	move.l	%d4,%d0		/* sz(%d4)の値を%d0に格納 */
 
-END_PUTSTRING:
+END_GETSTRING:
 	movem.l	(%sp)+,%d4/%a1	/* レジスタの回復 */
 	rts
 
