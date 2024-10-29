@@ -41,6 +41,7 @@ End_of_program:
 
 /* キューの初期化 */
 Init_Q:
+    move.l  %a0, -(%sp)
     lea.l   BF0_START, %a0
     move.l  %a0, PUT_PTR0
     move.l  %a0, GET_PTR0
@@ -52,10 +53,12 @@ Init_Q:
     move.l  %a0, GET_PTR1
     move.b  #0xff, PUT_FLG1
     move.b  #0x00, GET_FLG1
+    move.l  %a0, (%sp)+	
     rts
 
 /* キュー番号に応じたポインタ・フラグ・バッファを設定 */
 SelectQueue:
+    move.l  %a6, -(%sp)
     cmp.w   #0, %d0
     beq     UseQueue0
     cmp.w   #1, %d0
@@ -81,6 +84,7 @@ UseQueue1:
     move.l  %a6, BF_START
     lea.l   BF1_END, %a6
     move.l  %a6, BF_END
+    move.l  (%sp)+, %a6
     rts
 
 /* キュー番号に応じたポインタ・フラグ・バッファを選択して更新する */
