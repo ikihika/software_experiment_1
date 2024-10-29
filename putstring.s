@@ -13,11 +13,10 @@
 *************************************************************************************
 
 PUTSTRING:
-	movem.l %d4/%a0-%a1, -(%sp)
+	movem.l %d4/%a1, -(%sp)
 	cmpi.l #0, %d0
 	bne    END_PUTSTRING  /*チャネルが０以外のとき何もせずに復帰*/
-	move.l #0, (%a0)
-	move.l %d2, %a1
+	move.l %d2, %a1      /*読み込み先の先頭アドレスを格納*/
 	move.l #0, %d4       /*sz(%d4)*/
 	bra    PUT_LOOP
 
@@ -25,15 +24,18 @@ PUTSTRING:
 PUT_LOOP:
 	cmpi.l #0, %d3
 	beq    SET_SIZE       /*sizeが０のときPUTSTRINGを終了*/
+	
 	cmp.l  %d4, %d3      
 	beq    ANMASK         /*sz = sizeのときアンマスク*/
+	
 	move.l #1, %d0        /*送信キューを指定*/
 	move.b (%a1), %d1     /*送信するデータを指定*/
 	jsr    INQ
 	cmpi.l #0, %d0     
 	beq    ANMASK         /*INQが失敗のとき*/
+	
 	addq.l #1, %a1       /*次のバイトに移動*/
-	addi.l #1, %d4        /*szをインクリメント*/
+	addq.l #1, %d4        /*szをインクリメント*/
 	bra    PUT_LOOP
 
 
@@ -45,6 +47,6 @@ SET_SIZE:
 	move.l %d4, %d0 /*戻り値の設定*/
 	
 END_PUTSTRING:
-	movem.l (%sp)+, %d4/%a0-%a1
+	movem.l (%sp)+, %d4/%a1 /*レジスタ復帰*/
 	rts
 
