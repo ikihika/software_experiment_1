@@ -98,7 +98,7 @@ boot:
 	****************
 	** 送受信 (UART1) 関係の変更
 	****************
-	move.w #0xe108, USTCNT1 /* 送受信可能, パリティなし, 1 stop, 8 bit, */
+	move.w #0xe10c, USTCNT1 /* 送受信可能, パリティなし, 1 stop, 8 bit, */
 				/* 受信割り込み許可、送信割り込み許可 */
 
 	****************
@@ -316,14 +316,14 @@ WORK: .ds.b 256
 .section .text
 .even
 MAIN:
-	move.l #0x00fffff,%d7  /*ループカウンター*/
+	move.b #0,%d6
+	move.l #0x000fffff,%d7  /*ループカウンター*/
 	move.l #0x00fffffb, IMR
 
 LOOP:
-	addq.l #1,%d7
-	addq.l #1,%d7
-	subq.l #1,%d7
-	subq.l #1,%d7
+	move.l %d7,%d5
+	andi.l #0x0f,%d5
+	move.b %d5,LED1
 	subq.l #1,%d7
 	bne LOOP
 
@@ -351,33 +351,39 @@ END:
 .section .text
 .even
 uart1_interrupt:
-	movem.l %d0-%d7/%a0-%a6, -(%sp)   /* レジスタの退避 */
+	movem.l %d0-%d5/%a0-%a6, -(%sp)   /* レジスタの退避 */
+
+	
+	
 
 check_send:
 	move.w  UTX1, %d0                 /* UTX1の内容をd0に一時的に保存 */
 	btst    #15, %d0                  /* 送信レジスタの15ビット目をチェック */
-	beq     check_receive             /* 送信割り込みでなければ受信チェックへ */
+	beq    check_receive             /* 送信割り込みでなければ受信チェックへ */
 
 	/* 送信割り込みの場合 */
+	addq.b #1,%d6
+	andi.b #0x0f,%d6
+	move.b %d6,LED0
 	moveq.l #0, %d1                   /* ch = 0 を設定 */
 	jsr     INTERPUT                  /* INTERPUTを呼び出し */
 	bra     end_interrupt
 
 check_receive:
+	move.b #'2',LED0
 	move.w  URX1, %d3                 /* URX1の内容をd3に一時的に保存 */
 	move.b  %d3, %d2                  /* d3の下位8bit(データ部分)をd2にコピー */
-	move.b #'7',LED1
 	btst    #13, %d3                  /* 受信レジスタの13ビット目をチェック */
 	beq     end_interrupt             /* 受信割り込みでなければ終了 */
 	
 
 	/* 受信割り込みの場合 */
 	moveq.l #0, %d1 /* ch = 0 を設定 */
-	move.b #'6',LED2
 	jsr     INTERGET                  /* INTERGETを呼び出し */
+	move.b #'7',LED1
 
 end_interrupt:
-	movem.l (%sp)+, %d0-%d7/%a0-%a6   /* レジスタの復帰 */
+	movem.l (%sp)+, %d0-%d5/%a0-%a6   /* レジスタの復帰 */
 	rte                               /* 割り込みからの復帰 */
 
 *********************************
@@ -385,25 +391,30 @@ end_interrupt:
 **入力:チャネルch(%d1.L)
 **戻り値:なし
 *********************************	
-INTERPUT:
+INTERPUT:	
 	move.b #'4',LED4
 	move.l %d0, -(%sp) /*スタック退避*/
+	move.w %sr, -(%sp)
 	move.w #0x2700, %SR /*走行レベルを7に設定*/
 	cmpi.l #0, %d1
 	bne    END_INTERPUT /*チャネルが０以外のとき何もせずに復帰*/
 	move.l #1, %d0      /*送信キューを選択*/
 	jsr    OUTQ         /*OUTQを実行*/
-	cmpi.b #0, %d0
+	move.b %d0,LED2
+	cmpi.l #0, %d0
 	beq    MASK         /*キューが空のときマスクを実行*/
 	addi.w #0x800,%d1
 	move.w  %d1, UTX1/*上位8bitのヘッダ付与*/
 	bra    END_INTERPUT
 
 MASK:
+	move.b #'5',LED1
 	andi.w #0xfffb, USTCNT1 /*送信割り込みの禁止*/
+	move.w #0xe108, USTCNT1
 
 END_INTERPUT:
-	move.l (%sp)+, %d0 
+	move.w (%sp)+, %sr
+	move.l (%sp)+, %d0
 	rts
 
 
@@ -465,15 +476,14 @@ END_PUTSTRING:
 
 INTERGET:
 	move.b #'5',LED3
-        movem.l %d0,-(%sp)	/* レジスタ退避 */
         cmpi.l  #0,%d1		/* ch≠0ならなにもせず復帰 */
         bne     END_INTERGET
-        move.l  %d2,%d1		/* INQの入力d1に受信データを格納 */
+        move.b  %d2,%d1		/* INQの入力d1に受信データを格納 */
 	move.l	#0,%d0		/* キュー番号を0にする */
         jsr     INQ
+	move.b #'6',LED2
 
 END_INTERGET:
-        movem.l (%sp)+,%d0	/* レジスタの回復 */
         rts
 
 
@@ -511,7 +521,3 @@ Input:
 END_GETSTRING:
 	movem.l	(%sp)+,%d4/%a1	/* レジスタの回復 */
 	rts
-
-
-
-
