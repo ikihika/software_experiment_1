@@ -192,7 +192,7 @@ TT:
 	move.l #8, %d3 | size = 8
 	trap #0
 	addi.w #1,TTC | TTC カウンタを 1 つ増やして
-	bra TT
+	bra TTEND
 
 TTKILL:
 	move.b #'3',LED5
