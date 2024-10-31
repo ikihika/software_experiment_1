@@ -89,7 +89,11 @@ boot:
 	*****************
 	move.w #0x0004, TCTL1 /* restart, 割り込み不可, */
 				/* システムクロックの 1/16 を単位として計時， */
-				/* タイマ使用停止 */
+	/* タイマ使用停止 */
+
+
+
+	
 	****************
 	** 割り込みベクタの設定
 	****************
@@ -118,6 +122,7 @@ boot:
 
 /* キューの初期化 */
 Init_Q:
+	move.l %a0, -(%sp)
 	lea.l   BF0_START, %a0
 	move.l  %a0, PUT_PTR0
 	move.l  %a0, GET_PTR0
@@ -129,13 +134,14 @@ Init_Q:
 	move.l  %a0, GET_PTR1
 	move.b  #0xff, PUT_FLG1
 	move.b  #0x00, GET_FLG1
+	move.l (%sp)+,%a0
 	rts
 
 /* キュー番号に応じたポインタ・フラグ・バッファを設定 */
 SelectQueue:
-	cmp.w   #0, %d0
+	cmpi.l   #0, %d0
 	beq     UseQueue0
-	cmp.w   #1, %d0
+	cmpi.l   #1, %d0
 	beq     UseQueue1
 
 UseQueue0:
@@ -162,9 +168,9 @@ UseQueue1:
 
 /* キュー番号に応じたポインタ・フラグ・バッファを選択して更新する */
 UpdateQueuePointers:
-	cmp.w   #0, %d0
+	cmpi.l   #0, %d0
 	beq     UpdateQueue0
-	cmp.w   #1, %d0
+	cmpi.l   #1, %d0
 	beq     UpdateQueue1
 
 UpdateQueue0:
@@ -358,13 +364,12 @@ uart1_interrupt:
 
 check_send:
 	move.w  UTX1, %d0                 /* UTX1の内容をd0に一時的に保存 */
-	btst    #15, %d0                  /* 送信レジスタの15ビット目をチェック */
-	beq    check_receive             /* 送信割り込みでなければ受信チェックへ */
+	andi.w #0x8000,%d0                  /* 送信レジスタの15ビット目をチェック */
+	cmpi.w #0x8000,%d0
+	bne    check_receive             /* 送信割り込みでなければ受信チェックへ */
 
 	/* 送信割り込みの場合 */
-	addq.b #1,%d6
-	andi.b #0x0f,%d6
-	move.b %d6,LED0
+
 	moveq.l #0, %d1                   /* ch = 0 を設定 */
 	jsr     INTERPUT                  /* INTERPUTを呼び出し */
 	bra     end_interrupt
@@ -373,8 +378,9 @@ check_receive:
 	move.b #'2',LED0
 	move.w  URX1, %d3                 /* URX1の内容をd3に一時的に保存 */
 	move.b  %d3, %d2                  /* d3の下位8bit(データ部分)をd2にコピー */
-	btst    #13, %d3                  /* 受信レジスタの13ビット目をチェック */
-	beq     end_interrupt             /* 受信割り込みでなければ終了 */
+	andi.w #0x2000,%d3		  /* 受信レジスタの13ビット目をチェック */
+	cmpi.w #0x2000,%d3
+	bne     end_interrupt             /* 受信割り込みでなければ終了 */
 	
 
 	/* 受信割り込みの場合 */
@@ -397,7 +403,7 @@ INTERPUT:
 	move.w %sr, -(%sp)
 	move.w #0x2700, %SR /*走行レベルを7に設定*/
 	cmpi.l #0, %d1
-	bne    END_INTERPUT /*チャネルが０以外のとき何もせずに復帰*/
+	bne    MASK /*チャネルが０以外のとき何もせずに復帰*/
 	move.l #1, %d0      /*送信キューを選択*/
 	jsr    OUTQ         /*OUTQを実行*/
 	move.b %d0,LED2
@@ -408,9 +414,10 @@ INTERPUT:
 	bra    END_INTERPUT
 
 MASK:
-	move.b #'5',LED1
-	andi.w #0xfffb, USTCNT1 /*送信割り込みの禁止*/
-	move.w #0xe108, USTCNT1
+	addq.b #1,%d6
+	andi.b #0x0f,%d6
+	move.b %d6,LED0
+	andi.w #0xfff8, USTCNT1 /*送信割り込みの禁止*/
 
 END_INTERPUT:
 	move.w (%sp)+, %sr
