@@ -147,11 +147,9 @@ MAIN:
 ** 走行モードとレベルの設定 (「ユーザモード」への移行処理)
 	move.w #0x0000, %SR | USER MODE, LEVEL 0
 	lea.l USR_STK_TOP,%SP | user stack の設定
-	move.b #'2',LED7
 ** システムコールによる RESET_TIMER の起動
 	move.l #SYSCALL_NUM_RESET_TIMER,%D0
 	trap #0
-	move.b #'5',LED7
 ** システムコールによる SET_TIMER の起動
 	move.l #SYSCALL_NUM_SET_TIMER, %D0
 	move.w #50000, %D1
@@ -163,6 +161,7 @@ MAIN:
 * ターミナルの入力をエコーバックする
 ******************************
 LOOP:
+	move.b #'4',LED4
 	move.l #SYSCALL_NUM_GETSTRING, %D0
 	move.l #0, %D1 | ch = 0
 	move.l #BUF, %D2 | p = #BUF
@@ -182,7 +181,7 @@ LOOP:
 * ５回実行すると，RESET_TIMER をする．
 ******************************
 TT:
-	move.b #'2',LED6
+	move.b #'5',LED3
 	movem.l %d0-%d7/%a0-%a6,-(%SP)
 	cmpi.w #5,TTC | TTC カウンタで 5 回実行したかどうか数える
 	beq TTKILL | 5 回実行したら，タイマを止める
@@ -191,16 +190,16 @@ TT:
 	move.l #TMSG, %d2 | p = #TMSG
 	move.l #8, %d3 | size = 8
 	trap #0
-	addi.w #1,TTC | TTC カウンタを 1 つ増やして
+	addi.w #1,TTC | TTC カウンタを 1 つ増やして戻る
 	bra TTEND
 
 TTKILL:
-	move.b #'3',LED5
+	move.b #'7',LED1
 	move.l #SYSCALL_NUM_RESET_TIMER,%d0
 	trap #0
 	
 TTEND:
-	move.b #'4',LED4
+	move.b #'6',LED2
 	movem.l (%SP)+,%d0-%d7/%a0-%a6
 	rts
 
@@ -226,9 +225,8 @@ end_interrupt:
 timer_interrupt:
 	movem.l %d0-%d7/%a0-%a6, -(%sp)/*レジスタ退避*/
 
-	move.w  TSTAT1, %d0
-	btst #0, %d0
-	beq end_interrupt1
+	btst #0, TSTAT1
+	beq  end_interrupt1
 
 	move.w #0x0000, TSTAT1
 	jsr CALL_RP
@@ -266,11 +264,12 @@ USR_STK_TOP: | ユーザスタック領域の最後尾
 	.section .text
 
 RESET_TIMER:
+	move.b #'2',LED6
 	move.w #0x0004, TCTL1
-	move.b #'7',LED7
 	rts
 
 SET_TIMER:
+	move.b #'3',LED5 
 	movem.l %d1-%d2/%a0, -(%sp)
 	lea.l task_p, %a0
 	move.l %d2, (%a0)
@@ -281,6 +280,7 @@ SET_TIMER:
 	rts
 
 CALL_RP:
+	move.b #'8',LED1
 	movem.l %a0, -(%sp)
 	movea.l task_p, %a0
 	jmp (%a0)
@@ -291,7 +291,6 @@ CALL_RP:
 *systemcall
 ***********
 SYSTEM_CALL:
-	move.b #'3',LED7
 	movem.l %a0, -(%sp)
 	
 	lea.l GETSTRING, %a0
@@ -309,9 +308,7 @@ SYSTEM_CALL:
 	lea.l SET_TIMER, %a0
 
 CALL_Finish:
-	move.b #'4',LED7
 	jsr (%a0)
-	move.b #'6',LED7
 	movem.l (%sp)+,%a0
 	rte	
 
