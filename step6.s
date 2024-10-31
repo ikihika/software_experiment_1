@@ -330,15 +330,10 @@ MAIN:
 	move.l #0x00fffffb, IMR
 
 LOOP:
-	move.l %d7,%d5
-	andi.l #0x0f,%d5
-	move.b %d5,LED1
 	subq.l #1,%d7
 	bne LOOP
 
 END:	
-	move.b #'1',LED7        /* LED7 を光らせる */
-
 	/* GETSTRING(0, #WORK, 256) */
 	move.l #0,%d1
 	lea.l WORK,%a2
@@ -398,7 +393,6 @@ end_interrupt:
 **戻り値:なし
 *********************************	
 INTERPUT:	
-	move.b #'4',LED4
 	move.l %d0, -(%sp) /*スタック退避*/
 	move.w %sr, -(%sp)
 	move.w #0x2700, %SR /*走行レベルを7に設定*/
@@ -406,7 +400,6 @@ INTERPUT:
 	bne    END_INTERPUT /*チャネルが０以外のとき何もせずに復帰*/
 	move.l #1, %d0      /*送信キューを選択*/
 	jsr    OUTQ         /*OUTQを実行*/
-	move.b %d0,LED2
 	cmpi.l #0, %d0
 	beq    MASK         /*キューが空のときマスクを実行*/
 	andi.w #0x00ff,%d1
@@ -415,9 +408,6 @@ INTERPUT:
 	bra    END_INTERPUT
 
 MASK:
-	addq.b #1,%d6
-	andi.b #0x0f,%d6
-	move.b %d6,LED0
 	andi.w #0xfffb, USTCNT1 /*送信割り込みの禁止*/
 
 END_INTERPUT:
@@ -439,7 +429,6 @@ END_INTERPUT:
 *************************************************************************************
 
 PUTSTRING:
-	move.b #'3',LED5         /* LED5 を光らせる */
 	movem.l %d4/%a0-%a1, -(%sp)
 	cmpi.l #0, %d0
 	bne    END_PUTSTRING  /*チャネルが０以外のとき何もせずに復帰*/
@@ -483,7 +472,6 @@ END_PUTSTRING:
 *************************************************
 
 INTERGET:
-	move.b #'5',LED3
         cmpi.l  #0,%d1		/* ch≠0ならなにもせず復帰 */
         bne     END_INTERGET
         move.b  %d2,%d1		/* INQの入力d1に受信データを格納 */
@@ -504,7 +492,6 @@ END_INTERGET:
 
 
 GETSTRING:
-	move.b #'2',LED6         /* LED6 を光らせる */
 	movem.l	%d4/%a1,-(%sp)	/* レジスタの退避 */
 	cmpi.l	#0,%d1
 	bne	END_GETSTRING	/* チャネルが0以外ならEND_GETSTRINGへ */
