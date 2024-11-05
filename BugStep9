@@ -506,7 +506,7 @@ CALL_RP:
 	move.b #'8',LED0
 	movem.l %a0, -(%sp)
 	movea.l task_p, %a0
-	jmp (%a0)
+	jsr (%a0)
 	movem.l (%sp)+, %a0
 	rts
 
