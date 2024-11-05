@@ -123,7 +123,7 @@ boot:
 ** 割り込みベクタの設定
 ****************
 	move.l #timer_interrupt, 0x118 /* タイマー割り込みベクタ設定 */
-	move.w #0xe108, USTCNT1
+	move.w #0xe10c, USTCNT1
 	move.l #0x00ff3ff9, IMR
 
 ***************
@@ -363,7 +363,7 @@ MAIN:
 * ターミナルの入力をエコーバックする
 ******************************
 LOOP:
-	move.b #'4',LED4
+	
 	move.l #SYSCALL_NUM_GETSTRING, %D0
 	move.l #0, %D1 | ch = 0
 	move.l #BUF, %D2 | p = #BUF
@@ -375,6 +375,8 @@ LOOP:
 	move.l #0, %D1 | ch = 0
 	move.l #BUF,%D2 | p = #BUF
 	trap #0
+
+	move.b #'4',LED4
 	
 	bra LOOP
 
@@ -494,19 +496,18 @@ RESET_TIMER:
 
 SET_TIMER:
 	move.b #'3',LED5 
-	movem.l %d1-%d2/%a0, -(%sp)
 	move.l %d2, task_p
 	move.w #0x00ce, TPRER1
 	move.w %d1, TCMP1
 	move.w #0x0015, TCTL1
-	movem.l (%sp)+,%d1-%d2/%a0
 	rts
 
 CALL_RP:
-	move.b #'8',LED0
 	movem.l %a0, -(%sp)
-	movea.l task_p, %a0
+	move.b #'8',LED0
+	move.l task_p, %a0
 	jsr (%a0)
+	move.b #'9',LED0
 	movem.l (%sp)+, %a0
 	rts
 
@@ -517,15 +518,15 @@ SYSTEM_CALL:
 	movem.l %a0, -(%sp)
 	
 	lea.l GETSTRING, %a0
-	subi.l #1,%d0
+	cmpi.l #1,%d0
 	beq CALL_Finish
 
 	lea.l PUTSTRING, %a0
-	subi.l #1,%d0
+	cmpi.l #2,%d0
 	beq CALL_Finish
 	
 	lea.l RESET_TIMER, %a0
-	subi.l #1,%d0
+	cmpi.l #3,%d0
 	beq CALL_Finish
 
 	lea.l SET_TIMER, %a0
@@ -533,7 +534,7 @@ SYSTEM_CALL:
 CALL_Finish:
 	jsr (%a0)
 	movem.l (%sp)+,%a0
-	rte	
+	rte
 
 	
 *********************************
@@ -541,7 +542,7 @@ CALL_Finish:
 **入力:チャネルch(%d1.L)
 **戻り値:なし
 *********************************	
-INTERPUT:	
+INTERPUT:
 	move.l %d0, -(%sp) /*スタック退避*/
 	move.w %sr, -(%sp)
 	move.w #0x2700, %SR /*走行レベルを7に設定*/
@@ -581,7 +582,7 @@ END_INTERPUT:
 
 PUTSTRING:
 	movem.l %d4/%a0-%a1, -(%sp)
-	cmpi.l #0, %d0
+	cmpi.l #0, %d1
 	bne    END_PUTSTRING  /*チャネルが０以外のとき何もせずに復帰*/
 	move.l #0, (%a0)
 	move.l %d2, %a1
