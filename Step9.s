@@ -344,8 +344,6 @@ BF_END:     .ds.l  1  /* バッファ終了ポインタ */
 .section .text
 .even
 MAIN:
-	move.b #'1',LED7
-	
 ** 走行モードとレベルの設定 (「ユーザモード」への移行処理)
 	move.w #0x0000, %SR | USER MODE, LEVEL 0
 	lea.l USR_STK_TOP,%SP | user stack の設定
@@ -375,8 +373,6 @@ LOOP:
 	move.l #0, %D1 | ch = 0
 	move.l #BUF,%D2 | p = #BUF
 	trap #0
-
-	move.b #'4',LED4
 	
 	bra LOOP
 
@@ -386,7 +382,6 @@ LOOP:
 * ５回実行すると，RESET_TIMER をする．
 ******************************
 TT:
-	move.b #'5',LED3
 	movem.l %d0-%d7/%a0-%a6,-(%SP)
 	cmpi.w #5,TTC | TTC カウンタで 5 回実行したかどうか数える
 	beq TTKILL | 5 回実行したら，タイマを止める
@@ -399,12 +394,10 @@ TT:
 	bra TTEND
 
 TTKILL:
-	move.b #'7',LED1
 	move.l #SYSCALL_NUM_RESET_TIMER,%d0
 	trap #0
 	
 TTEND:
-	move.b #'6',LED2
 	movem.l (%SP)+,%d0-%d7/%a0-%a6
 	rts
 	
@@ -446,20 +439,19 @@ end_interrupt:
 .section .text
 .even
 timer_interrupt:
-	move.b #'8',LED1
 	movem.l %d0-%d7/%a0-%a6, -(%sp)/*レジスタ退避*/
 
-	move.w TSTAT1, %d0
-	andi.w #0x0001,%d0                  
-	cmpi.w #0x0001,%d0
+	move.w TSTAT1, %d0 /*TSTAT1の値をd0にコピー．*/
+	andi.w #0x0001,%d0 /*TSTAT1 の第0ビットが1となっているかどうかをチェックする．*/ 
+	cmpi.w #0x0001,%d0 
 	bne  end_interrupt1
 
-	move.l #0x00000000, TSTAT1
-	jsr CALL_RP
+	move.l #0x00000000, TSTAT1 /*TSTAT1を0クリアしておく．*/
+	jsr CALL_RP /*CALL_RPを呼び出す．*/
 
 end_interrupt1:
-	movem.l (%sp)+, %d0-%d7/%a0-%a6/*レジスタ回復*/
-	rte
+	movem.l (%sp)+, %d0-%d7/%a0-%a6/*レジスタ復帰*/
+	rte /* 割り込みからの復帰 */
 
 ****************************************************************
 *** 初期値のあるデータ領域
@@ -489,52 +481,78 @@ USR_STK_TOP: | ユーザスタック領域の最後尾
 *******
 	.section .text
 
+***************************************************************
+** タイマ割り込みを付加にし、タイマも停止する。
+** 入力：なし
+** 戻り値：なし
+***************************************************************
+	
 RESET_TIMER:
-	move.b #'2',LED6
-	move.w #0x0004, TCTL1
+	move.w #0x0004, TCTL1 /*タイマ 1 コントロールレジスタ TCTL1 を設定 (restart, 割り込み不可，システムクロックの 1/16 を単位として計時，タイマ使用停止)．*/
 	rts
 
+***************************************************************
+** タイマ割り込み時に呼び出すべきルーチンを設定する。
+** タイマ割り込み周期 t を設定し，t * 0.1 msec 秒毎に割り込みが発生するようにする。
+** タイマ使用を許可し，タイマ割り込みを許可する。
+** 入力：タイマ割り込み発生周期 t → %D1.w
+**　　　割り込み時に起動するルーチンの先頭アドレス p → %D2.L
+** 戻り値：なし
+**************************************************************
+	
 SET_TIMER:
-	move.b #'3',LED5 
-	move.l %d2, task_p
-	move.w #0x00ce, TPRER1
-	move.w %d1, TCMP1
-	move.w #0x0015, TCTL1
+	move.l %d2, task_p /*割り込み時に起動するルーチン先頭アドレスpを，大域変数task-pに代入*/
+	move.w #0x00ce, TPRER1 /*TPRER1を設定し，0.1msec進むとカウンタが 1 増えるようにする．*/
+	move.w %d1, TCMP1 /*タイマ割り込み発生周期tを，タイマ1コンペアレジスタ TCMP1 に代入する．*/
+	move.w #0x0015, TCTL1 /*TCTL1 を設定 (restart, 割り込み許可 (enable the compareinterrupt)，システムクロックの 1/16 を単位として計時，タイマ使用許可) し，タイマをスタートさせる*/
 	rts
 
+***************************************************************
+** タイマ割り込み時に処理すべきルーチンを呼び出す。
+** 入力：なし
+** 戻り値：なし
+**************************************************************
+	
 CALL_RP:
-	movem.l %a0, -(%sp)
-	move.b #'8',LED0
-	move.l task_p, %a0
-	jsr (%a0)
-	move.b #'9',LED0
-	movem.l (%sp)+, %a0
+	movem.l %a0, -(%sp) /*レジスタを退避*/
+	move.l task_p, %a0 /*大域変数 task-p の指すアドレスへジャンプする*/
+	jsr (%a0) 
+	movem.l (%sp)+, %a0 /*レジスタの回復*/
 	rts
 
 ************
 *systemcall
 ***********
+.section .text
+
+***************************************************************
+** 呼び出すべきシステムコールを，%D0 (システムコール番号 1-4 を格納) を用いて判別する。
+** 目的のシステムコールを呼び出す。
+** 入力：システムコール番号 → %D0.L
+** 戻り値：システムコール呼び出しの結果 → %D0.L
+**************************************************************
+	
 SYSTEM_CALL:
-	movem.l %a0, -(%sp)
+	movem.l %a0, -(%sp) /*レジスタの退避*/
 	
-	lea.l GETSTRING, %a0
-	cmpi.l #1,%d0
+	lea.l GETSTRING, %a0 /*遷移先をGETSTRINGに設定*/
+	cmpi.l #1,%d0 /*d0の値が１であれば選択終了*/
 	beq CALL_Finish
 
-	lea.l PUTSTRING, %a0
-	cmpi.l #2,%d0
+	lea.l PUTSTRING, %a0 /*遷移先をPUTSTRINGに設定*/
+	cmpi.l #2,%d0 /*d0の値が２であれば選択終了*/
 	beq CALL_Finish
 	
-	lea.l RESET_TIMER, %a0
-	cmpi.l #3,%d0
+	lea.l RESET_TIMER, %a0 /*遷移先をRESET_TIMERに設定*/
+	cmpi.l #3,%d0 /*d0の値が３であれば選択終了*/
 	beq CALL_Finish
 
-	lea.l SET_TIMER, %a0
+	lea.l SET_TIMER, %a0 /*遷移先をSET_TIMERに設定*/
 
 CALL_Finish:
-	jsr (%a0)
-	movem.l (%sp)+,%a0
-	rte
+	jsr (%a0) /*設定された遷移先にジャンプ*/
+	movem.l (%sp)+,%a0 /*レジスタの回復*/
+	rte/* 割り込みからの復帰 */
 
 	
 *********************************
