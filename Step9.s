@@ -408,7 +408,7 @@ TTEND:
 .section .text
 .even
 uart1_interrupt:
-	movem.l %d0-%d5/%a0-%a6, -(%sp)   /* レジスタの退避 */
+	movem.l %d0-%d7/%a0-%a6, -(%sp)   /* レジスタの退避 */
 
 	
 	
@@ -437,7 +437,7 @@ check_receive:
 	jsr     INTERGET                  /* INTERGETを呼び出し */
 
 end_interrupt:
-	movem.l (%sp)+, %d0-%d5/%a0-%a6   /* レジスタの復帰 */
+	movem.l (%sp)+, %d0-%d7/%a0-%a6   /* レジスタの復帰 */
 	rte                               /* 割り込みからの復帰 */
 
 .section .text
